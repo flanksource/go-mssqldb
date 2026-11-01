@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang-sql/sqlexp"
+	govalues "github.com/govalues/decimal"
 	"github.com/shopspring/decimal"
 )
 
@@ -670,8 +671,8 @@ END;
 	defer db.ExecContext(ctx, sqltextdrop)
 
 	t.Run("original test", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("52.74")
-		minout := Money[decimal.Decimal]{dinout}
+		dinout, _ := govalues.Parse("52.74")
+		minout := Money[govalues.Decimal]{dinout}
 		_, err = db.ExecContext(ctx, sqltextrun,
 			sql.Named("minout", sql.Out{Dest: &minout}),
 		)
@@ -679,15 +680,15 @@ END;
 			t.Error(err)
 		}
 
-		expected, _ := decimal.NewFromString("29342.1234")
+		expected, _ := govalues.Parse("29342.1234")
 		if !minout.Decimal.Equal(expected) {
 			t.Errorf("expected 29342.1234, got %s", dinout.String())
 		}
 	})
 
 	t.Run("nullable value", func(t *testing.T) {
-		val, _ := decimal.NewFromString("52.74")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(val)}
+		val, _ := govalues.Parse("52.74")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: val, Valid: true}}
 		_, err = db.ExecContext(ctx, sqltextrun,
 			sql.Named("minout", sql.Out{Dest: &minout}),
 		)
@@ -695,7 +696,7 @@ END;
 			t.Error(err)
 		}
 
-		expected, _ := decimal.NewFromString("29342.1234")
+		expected, _ := govalues.Parse("29342.1234")
 		if !minout.Decimal.Valid || !minout.Decimal.Decimal.Equal(expected) {
 			if minout.Decimal.Valid {
 				t.Errorf("expected 29342.1234, got %t, %s", minout.Decimal.Valid, minout.Decimal.Decimal.String())
@@ -706,7 +707,7 @@ END;
 	})
 
 	t.Run("null value", func(t *testing.T) {
-		minout := Money[decimal.NullDecimal]{decimal.NullDecimal{}}
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{}}
 		_, err = db.ExecContext(ctx, sqltextrun,
 			sql.Named("minout", sql.Out{Dest: &minout}),
 		)
@@ -714,7 +715,7 @@ END;
 			t.Error(err)
 		}
 
-		expected, _ := decimal.NewFromString("-99922.333")
+		expected, _ := govalues.Parse("-99922.333")
 		if !minout.Decimal.Valid || !minout.Decimal.Decimal.Equal(expected) {
 			if minout.Decimal.Valid {
 				t.Errorf("expected -99922.333, got %t, %s", minout.Decimal.Valid, minout.Decimal.Decimal.String())
@@ -725,8 +726,8 @@ END;
 	})
 
 	t.Run("null result", func(t *testing.T) {
-		val, _ := decimal.NewFromString("535.8")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(val)}
+		val, _ := govalues.Parse("535.8")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: val, Valid: true}}
 		_, err = db.ExecContext(ctx, sqltextrun,
 			sql.Named("minout", sql.Out{Dest: &minout}),
 		)
@@ -795,7 +796,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -827,7 +828,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -838,6 +839,7 @@ END;
 		}
 
 		expected, _ := decimal.NewFromString("323233.1133")
+		expectedMoney, _ := govalues.Parse("323233.1133")
 
 		if dinout.Valid {
 			if !expected.Equal(dinout.Decimal) {
@@ -848,7 +850,7 @@ END;
 		}
 
 		if rowval.Decimal.Valid {
-			if !expected.Equal(rowval.Decimal.Decimal) {
+			if !expectedMoney.Equal(rowval.Decimal.Decimal) {
 				t.Errorf("expected %s, got %t, %s", expected.String(), rowval.Decimal.Valid, rowval.Decimal.Decimal.String())
 			}
 		} else {
@@ -868,7 +870,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -879,6 +881,7 @@ END;
 		}
 
 		expected, _ := decimal.NewFromString("-777219991448.0097")
+		expectedMoney, _ := govalues.Parse("-777219991448.0097")
 
 		if dinout.Valid {
 			if !expected.Equal(dinout.Decimal) {
@@ -889,7 +892,7 @@ END;
 		}
 
 		if rowval.Decimal.Valid {
-			if !expected.Equal(rowval.Decimal.Decimal) {
+			if !expectedMoney.Equal(rowval.Decimal.Decimal) {
 				t.Errorf("expected %s, got %t, %s", expected.String(), rowval.Decimal.Valid, rowval.Decimal.Decimal.String())
 			}
 		} else {
@@ -910,7 +913,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -921,6 +924,7 @@ END;
 		}
 
 		expected, _ := decimal.NewFromString("29343.1234")
+		expectedMoney, _ := govalues.Parse("29343.1234")
 
 		if dinout.Valid {
 			if !expected.Equal(dinout.Decimal) {
@@ -931,7 +935,7 @@ END;
 		}
 
 		if rowval.Decimal.Valid {
-			if !expected.Equal(rowval.Decimal.Decimal) {
+			if !expectedMoney.Equal(rowval.Decimal.Decimal) {
 				t.Errorf("expected %s, got %t, %s", expected.String(), rowval.Decimal.Valid, rowval.Decimal.Decimal.String())
 			}
 		} else {
@@ -987,8 +991,8 @@ END;
 	defer db.ExecContext(ctx, sqltextdrop)
 
 	t.Run("positive 32-bit in, null out", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("535.8955")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(dinout)}
+		dinout, _ := govalues.Parse("535.8955")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: dinout, Valid: true}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -999,7 +1003,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1019,8 +1023,8 @@ END;
 	})
 
 	t.Run("positive 64-bit in, positive 32-bit out", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("499983212344.8763")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(dinout)}
+		dinout, _ := govalues.Parse("499983212344.8763")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: dinout, Valid: true}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -1031,7 +1035,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1041,7 +1045,7 @@ END;
 			t.Error("Next returned true but should return false after last row was returned")
 		}
 
-		expected, _ := decimal.NewFromString("6578.2211")
+		expected, _ := govalues.Parse("6578.2211")
 
 		if minout.Decimal.Valid {
 			if !expected.Equal(minout.Decimal.Decimal) {
@@ -1061,8 +1065,8 @@ END;
 	})
 
 	t.Run("negative 32-bit in, negative 64-bit out", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("-982.3421")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(dinout)}
+		dinout, _ := govalues.Parse("-982.3421")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: dinout, Valid: true}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -1073,7 +1077,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1083,7 +1087,7 @@ END;
 			t.Error("Next returned true but should return false after last row was returned")
 		}
 
-		expected, _ := decimal.NewFromString("-923232111223.1133")
+		expected, _ := govalues.Parse("-923232111223.1133")
 
 		if minout.Decimal.Valid {
 			if !expected.Equal(minout.Decimal.Decimal) {
@@ -1103,8 +1107,8 @@ END;
 	})
 
 	t.Run("negative 64-bit in, negative 32-bit out", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("-892322132322.9912")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(dinout)}
+		dinout, _ := govalues.Parse("-892322132322.9912")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: dinout, Valid: true}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -1115,7 +1119,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1125,7 +1129,7 @@ END;
 			t.Error("Next returned true but should return false after last row was returned")
 		}
 
-		expected, _ := decimal.NewFromString("-99922.333")
+		expected, _ := govalues.Parse("-99922.333")
 
 		if minout.Decimal.Valid {
 			if !expected.Equal(minout.Decimal.Decimal) {
@@ -1145,7 +1149,7 @@ END;
 	})
 
 	t.Run("null in, non-null out", func(t *testing.T) {
-		minout := Money[decimal.NullDecimal]{decimal.NullDecimal{}}
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -1156,7 +1160,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1166,7 +1170,7 @@ END;
 			t.Error("Next returned true but should return false after last row was returned")
 		}
 
-		expected, _ := decimal.NewFromString("-777219991448.0097")
+		expected, _ := govalues.Parse("-777219991448.0097")
 
 		if minout.Decimal.Valid {
 			if !expected.Equal(minout.Decimal.Decimal) {
@@ -1186,8 +1190,8 @@ END;
 	})
 
 	t.Run("non-null in, non-null out", func(t *testing.T) {
-		dinout, _ := decimal.NewFromString("1")
-		minout := Money[decimal.NullDecimal]{decimal.NewNullDecimal(dinout)}
+		dinout, _ := govalues.Parse("1")
+		minout := Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: dinout, Valid: true}}
 
 		rows, err := db.QueryContext(ctx, sqltextrun, sql.Named("minout", sql.Out{Dest: &minout}))
 		if err != nil {
@@ -1198,7 +1202,7 @@ END;
 		if !rows.Next() {
 			t.Error("Next returned false")
 		}
-		var rowval Money[decimal.NullDecimal]
+		var rowval Money[govalues.NullDecimal]
 		err = rows.Scan(&rowval)
 		if err != nil {
 			t.Error(err)
@@ -1208,7 +1212,7 @@ END;
 			t.Error("Next returned true but should return false after last row was returned")
 		}
 
-		expected, _ := decimal.NewFromString("29343.1234")
+		expected, _ := govalues.Parse("29343.1234")
 
 		if minout.Decimal.Valid {
 			if !expected.Equal(minout.Decimal.Decimal) {

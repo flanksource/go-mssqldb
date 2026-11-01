@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/golang-sql/sqlexp"
-	"github.com/shopspring/decimal"
+	"github.com/govalues/decimal"
 
 	// "github.com/cockroachdb/apd"
 	"github.com/golang-sql/civil"
@@ -161,11 +161,24 @@ func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
 	}
 }
 
-func makeMoneyParam(val decimal.Decimal) (res param) {
+// moneyMin and moneyMax bound SQL Server's money type, an int64 count of
+// ten-thousandths.
+var (
+	moneyMin = decimal.MustParse("-922337203685477.5808")
+	moneyMax = decimal.MustParse("922337203685477.5807")
+)
+
+// makeMoneyParam binds val as money, truncated to money's four decimal places;
+// a value outside money's range is an error.
+func makeMoneyParam(val decimal.Decimal) (res param, err error) {
+	val = val.Trunc(4)
+	if val.Cmp(moneyMin) < 0 || val.Cmp(moneyMax) > 0 {
+		return res, fmt.Errorf("mssql: %s is outside the money range [%s, %s]", val, moneyMin, moneyMax)
+	}
+	whole, frac, _ := val.Int64(4)
+	coeff := whole*10000 + frac
+
 	res.ti.TypeId = typeMoneyN
-
-	coeff := val.Mul(decimal.New(1, 4)).IntPart()
-
 	res.buffer = make([]byte, 8)
 	res.ti.Size = 8
 	binary.LittleEndian.PutUint32(res.buffer, uint32(coeff>>32))
@@ -221,10 +234,10 @@ func (s *Stmt) makeParamExtra(val driver.Value) (res param, err error) {
 	case sql.Out:
 		switch dest := val.Dest.(type) {
 		case Money[decimal.Decimal]:
-			res = makeMoneyParam(dest.Decimal)
+			res, err = makeMoneyParam(dest.Decimal)
 		case Money[decimal.NullDecimal]:
 			if dest.Decimal.Valid {
-				res = makeMoneyParam(dest.Decimal.Decimal)
+				res, err = makeMoneyParam(dest.Decimal.Decimal)
 			} else {
 				res.ti.TypeId = typeMoneyN
 				res.buffer = []byte{}

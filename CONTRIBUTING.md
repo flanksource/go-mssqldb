@@ -15,26 +15,23 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 
 ## Release Process
 
-This project uses [Release Please](https://github.com/googleapis/release-please) for automated version management and changelog generation.
+In this fork every push to `main` is tagged by the `autotag` workflow (`.github/workflows/autotag.yml`, `.github/scripts/autotag.sh`). The two Go modules are tagged independently, each only when a releasable commit since its last tag touched it:
 
-### How It Works
+| Module | Directory | Tag | Continues from |
+|--------|-----------|-----|----------------|
+| `github.com/microsoft/go-mssqldb` | `.` (excluding `gorm/`) | `vX.Y.Z` | upstream v1.11.2 |
+| `gorm.io/driver/sqlserver` | `gorm/` | `gorm/vX.Y.Z` | upstream v1.6.4 |
 
-1. **Conventional Commits**: When merging PRs to `main`, use [Conventional Commits](https://www.conventionalcommits.org/) format in PR titles or commit messages
-2. **Automated Release PR**: Release Please will automatically create/update a release PR that:
-   - Bumps version based on commit types
-   - Updates CHANGELOG.md
-   - Updates version.go
-3. **Review and Merge**: When ready to release, merge the Release Please PR
-4. **GitHub Release**: A GitHub release with tag will be automatically created
+There is no release PR, CHANGELOG or GitHub release; the tag is the release. `driverVersion` in `version.go` (sent in the login packet) stays at the upstream version it was forked from.
 
 ### Conventional Commit Prefixes
 
 | Prefix | Version Bump | Example |
 |--------|-------------|---------|
 | `feat:` | Minor (X.Y.0) | `feat: add connection pooling support` |
-| `fix:` | Patch (X.Y.Z) | `fix: resolve timeout issue` |
-| `feat!:` or `BREAKING CHANGE:` | Major (X.0.0) | `feat!: change API signature` |
-| `docs:`, `chore:`, `ci:`, `deps:` | No bump | Maintenance changes |
+| `fix:`, `perf:`, `refactor:`, `revert:` | Patch (X.Y.Z) | `fix: resolve timeout issue` |
+| `feat!:` or `BREAKING CHANGE:` | Fails the workflow: a Go major release needs a `/vN` module path, so it is tagged by hand | `feat!: change API signature` |
+| `docs:`, `chore:`, `ci:`, `test:`, `deps:` | No bump | Maintenance changes |
 
 ### Example PR Titles
 

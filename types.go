@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/microsoft/go-mssqldb/internal/cp"
 	"github.com/microsoft/go-mssqldb/internal/decimal"
 	"github.com/microsoft/go-mssqldb/msdsn"
@@ -929,9 +930,16 @@ func decodeMoney4(buf []byte) []byte {
 	return decimal.ScaleBytes(strconv.FormatInt(int64(money), 10), 4)
 }
 
-func decodeGuid(buf []byte, encoding msdsn.EncodeParameters) []byte {
+// decodeGuid is a uniqueidentifier as the connection reads it: its canonical
+// lowercase string under native types, else its 16 bytes — as sent, or in
+// RFC 4122 order under `guid conversion`.
+func decodeGuid(buf []byte, encoding msdsn.EncodeParameters) interface{} {
 	res := make([]byte, 16)
 	copy(res, buf)
+	if !encoding.LegacyTypes {
+		swapGUIDGroups(res)
+		return uuid.UUID(res).String()
+	}
 	if encoding.GuidConversion {
 		binary.LittleEndian.PutUint32(res[0:4], binary.BigEndian.Uint32(res[0:4]))
 		binary.LittleEndian.PutUint16(res[4:6], binary.BigEndian.Uint16(res[4:6]))
@@ -1125,7 +1133,7 @@ func decodeUdt(ti typeInfo, buf []byte) []byte {
 // It should return
 // the value type that can be used to scan types into. For example, the database
 // column type "bigint" this should return "reflect.TypeOf(int64(0))".
-func makeGoLangScanType(ti typeInfo) reflect.Type {
+func makeGoLangScanType(ti typeInfo, encoding msdsn.EncodeParameters) reflect.Type {
 	switch ti.TypeId {
 	case typeInt1:
 		return reflect.TypeOf(int64(0))
@@ -1208,6 +1216,9 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 	case typeNChar:
 		return reflect.TypeOf("")
 	case typeGuid:
+		if !encoding.LegacyTypes {
+			return reflect.TypeOf("")
+		}
 		return reflect.TypeOf([]byte{})
 	case typeXml:
 		return reflect.TypeOf("")

@@ -51,7 +51,7 @@ func TestMakeGoLangScanType(t *testing.T) {
 		{"typeBigVarChar", typeInfo{TypeId: typeBigVarChar}, reflect.TypeOf("")},
 		{"typeBigChar", typeInfo{TypeId: typeBigChar}, reflect.TypeOf("")},
 		{"typeNChar", typeInfo{TypeId: typeNChar}, reflect.TypeOf("")},
-		{"typeGuid", typeInfo{TypeId: typeGuid}, reflect.TypeOf([]byte{})},
+		{"typeGuid", typeInfo{TypeId: typeGuid}, reflect.TypeOf("")},
 		{"typeXml", typeInfo{TypeId: typeXml}, reflect.TypeOf("")},
 		{"typeText", typeInfo{TypeId: typeText}, reflect.TypeOf("")},
 		{"typeNText", typeInfo{TypeId: typeNText}, reflect.TypeOf("")},
@@ -63,10 +63,15 @@ func TestMakeGoLangScanType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := makeGoLangScanType(tt.typeInfo)
+			got := makeGoLangScanType(tt.typeInfo, msdsn.EncodeParameters{})
 			assert.Equal(t, tt.expected, got, "makeGoLangScanType()")
 		})
 	}
+
+	t.Run("typeGuid under native types=false", func(t *testing.T) {
+		got := makeGoLangScanType(typeInfo{TypeId: typeGuid}, msdsn.EncodeParameters{LegacyTypes: true})
+		assert.Equal(t, reflect.TypeOf([]byte{}), got)
+	})
 }
 
 func TestMakeGoLangTypeName(t *testing.T) {

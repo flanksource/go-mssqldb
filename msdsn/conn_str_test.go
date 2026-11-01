@@ -29,6 +29,7 @@ func TestInvalidConnectionString(t *testing.T) {
 		"multisubnetfailover=invalid",
 		"timezone=invalid",
 		"epa enabled=invalid",
+		"native types=invalid",
 
 		// ODBC mode
 		"odbc:password={",
@@ -720,6 +721,8 @@ func TestBooleanParamsAcceptYesNo(t *testing.T) {
 		{"notraceid=yes", "server=host;notraceid=yes", func(p Config) bool { return p.NoTraceID }},
 		{"guid conversion=yes", "server=host;guid conversion=yes", func(p Config) bool { return p.Encoding.GuidConversion }},
 		{"epa enabled=yes", "server=host;epa enabled=yes", func(p Config) bool { return p.EpaEnabled }},
+		{"native types=no", "server=host;native types=no", func(p Config) bool { return p.Encoding.LegacyTypes }},
+		{"native types=yes", "server=host;native types=yes", func(p Config) bool { return !p.Encoding.LegacyTypes }},
 	}
 
 	for _, tt := range tests {
@@ -729,6 +732,29 @@ func TestBooleanParamsAcceptYesNo(t *testing.T) {
 			assert.True(t, tt.check(p), "value was not applied")
 		})
 	}
+}
+
+func TestNativeTypes(t *testing.T) {
+	t.Run("native unless opted out", func(t *testing.T) {
+		p, err := Parse("server=host")
+		require.NoError(t, err)
+		assert.False(t, p.Encoding.LegacyTypes)
+	})
+
+	t.Run("an opt-out round-trips through the URL", func(t *testing.T) {
+		p, err := Parse("sqlserver://user:pass@host?native+types=false")
+		require.NoError(t, err)
+		assert.Equal(t, "false", p.URL().Query().Get(NativeTypes))
+		rt, err := Parse(p.URL().String())
+		require.NoError(t, err)
+		assert.True(t, rt.Encoding.LegacyTypes)
+	})
+
+	t.Run("the native default is not emitted", func(t *testing.T) {
+		p, err := Parse("sqlserver://user:pass@host")
+		require.NoError(t, err)
+		assert.False(t, p.URL().Query().Has(NativeTypes))
+	})
 }
 
 func TestTrustServerCertificateRoundTrip(t *testing.T) {

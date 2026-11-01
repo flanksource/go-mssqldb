@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	govalues "github.com/govalues/decimal"
 	"github.com/microsoft/go-mssqldb/internal/decimal"
 	"github.com/microsoft/go-mssqldb/msdsn"
-	shopspring "github.com/shopspring/decimal"
 )
 
 type Bulk struct {
@@ -369,9 +370,9 @@ func (b *Bulk) makeParam(val DataValue, col columnStruct) (res param, err error)
 	loc := getTimezone(b.cn)
 
 	switch valuer := val.(type) {
-	case Money[shopspring.Decimal]:
+	case Money[govalues.Decimal]:
 		return b.makeParam(valuer.Decimal, col)
-	case Money[shopspring.NullDecimal]:
+	case Money[govalues.NullDecimal]:
 		return b.makeParam(valuer.Decimal, col)
 	case driver.Valuer:
 		var e error
@@ -696,6 +697,15 @@ func (b *Bulk) makeParam(val DataValue, col columnStruct) (res param, err error)
 		case []byte:
 			res.ti.Size = len(val)
 			res.buffer = val
+		case string:
+			// a uuid.UUID or uuid.NullUUID, whose Value is its canonical string
+			u, parseErr := uuid.Parse(val)
+			if parseErr != nil {
+				err = fmt.Errorf("mssql: invalid value for Guid column: %q: %w", val, parseErr)
+				return
+			}
+			res.ti.Size = 16
+			res.buffer = guidBuffer(u, b.cn.sess.encoding)
 		default:
 			err = fmt.Errorf("mssql: invalid type for Guid column: %T %s", val, val)
 			return

@@ -5,8 +5,9 @@ import (
 	"encoding/binary"
 	"testing"
 
+	govalues "github.com/govalues/decimal"
 	"github.com/microsoft/go-mssqldb/internal/decimal"
-	shopspring "github.com/shopspring/decimal"
+	"github.com/microsoft/go-mssqldb/msdsn"
 )
 
 func TestBulkInvalidString(t *testing.T) {
@@ -170,11 +171,11 @@ func TestBulkMoney4Negative(t *testing.T) {
 func TestMoneyNullDecimal(t *testing.T) {
 	t.Parallel()
 
-	s := &Stmt{}
+	s := stmtWithEncoding(msdsn.EncodeParameters{LegacyTypes: true})
 
 	res, err := s.makeParam(
-		Money[shopspring.NullDecimal]{
-			shopspring.NewNullDecimal(shopspring.New(-287813234234, -4)),
+		Money[govalues.NullDecimal]{
+			govalues.NullDecimal{Decimal: govalues.MustNew(-287813234234, 4), Valid: true},
 		},
 	)
 
@@ -195,11 +196,11 @@ func TestMoneyNullDecimal(t *testing.T) {
 func TestMoneyNullDecimalNull(t *testing.T) {
 	t.Parallel()
 
-	s := &Stmt{}
+	s := stmtWithEncoding(msdsn.EncodeParameters{LegacyTypes: true})
 
 	res, err := s.makeParam(
-		Money[shopspring.NullDecimal]{
-			shopspring.NullDecimal{},
+		Money[govalues.NullDecimal]{
+			govalues.NullDecimal{},
 		},
 	)
 
@@ -219,10 +220,10 @@ func TestMoneyNullDecimalNull(t *testing.T) {
 func TestMoneyDecimal(t *testing.T) {
 	t.Parallel()
 
-	s := &Stmt{}
+	s := stmtWithEncoding(msdsn.EncodeParameters{LegacyTypes: true})
 
-	res, err := s.makeParam(Money[shopspring.Decimal]{
-		shopspring.New(-82913823232, -4),
+	res, err := s.makeParam(Money[govalues.Decimal]{
+		govalues.MustNew(-82913823232, 4),
 	},
 	)
 
@@ -246,8 +247,8 @@ func TestMoneyOutNullDecimal(t *testing.T) {
 	s := &Stmt{}
 
 	res, err := s.makeParam(sql.Out{
-		Dest: Money[shopspring.NullDecimal]{
-			shopspring.NewNullDecimal(shopspring.New(-287813234234, -4)),
+		Dest: Money[govalues.NullDecimal]{
+			govalues.NullDecimal{Decimal: govalues.MustNew(-287813234234, 4), Valid: true},
 		},
 	})
 
@@ -271,8 +272,8 @@ func TestMoneyOutNullDecimalNull(t *testing.T) {
 	s := &Stmt{}
 
 	res, err := s.makeParam(sql.Out{
-		Dest: Money[shopspring.NullDecimal]{
-			shopspring.NullDecimal{},
+		Dest: Money[govalues.NullDecimal]{
+			govalues.NullDecimal{},
 		},
 	})
 
@@ -291,8 +292,8 @@ func TestMoneyOutDecimal(t *testing.T) {
 	s := &Stmt{}
 
 	res, err := s.makeParam(sql.Out{
-		Dest: Money[shopspring.Decimal]{
-			shopspring.New(-82913823232, -4),
+		Dest: Money[govalues.Decimal]{
+			govalues.MustNew(-82913823232, 4),
 		},
 	})
 
@@ -316,8 +317,8 @@ func TestMoneyOutDecimalBetterPrecision(t *testing.T) {
 	s := &Stmt{}
 
 	res, err := s.makeParam(sql.Out{
-		Dest: Money[shopspring.Decimal]{
-			shopspring.New(-82913823232, -6),
+		Dest: Money[govalues.Decimal]{
+			govalues.MustNew(-82913823232, 6),
 		},
 	})
 
@@ -336,9 +337,9 @@ func TestMoneyOutDecimalBetterPrecision(t *testing.T) {
 }
 
 func TestMoneyValueDecimal(t *testing.T) {
-	d := shopspring.New(-82913823232, -6)
+	d := govalues.MustNew(-82913823232, 6)
 
-	m := Money[shopspring.Decimal]{d}
+	m := Money[govalues.Decimal]{d}
 
 	dv, _ := d.Value()
 	mv, err := m.Value()
@@ -355,8 +356,8 @@ func TestMoneyValueDecimal(t *testing.T) {
 func TestMoneyScanDecimal(t *testing.T) {
 	v := "123323.3233"
 
-	d := &shopspring.Decimal{}
-	m := &Money[shopspring.Decimal]{}
+	d := &govalues.Decimal{}
+	m := &Money[govalues.Decimal]{}
 
 	d.Scan(v)
 	m.Scan(v)
@@ -367,9 +368,9 @@ func TestMoneyScanDecimal(t *testing.T) {
 }
 
 func TestMoneyValueNullDecimal(t *testing.T) {
-	nd := shopspring.NewNullDecimal(shopspring.New(-82913823232, -6))
+	nd := govalues.NullDecimal{Decimal: govalues.MustNew(-82913823232, 6), Valid: true}
 
-	m := Money[shopspring.NullDecimal]{nd}
+	m := Money[govalues.NullDecimal]{nd}
 
 	dv, _ := nd.Value()
 	mv, err := m.Value()
@@ -386,8 +387,8 @@ func TestMoneyValueNullDecimal(t *testing.T) {
 func TestMoneyScanNullDecimal(t *testing.T) {
 	v := "123323.3233"
 
-	nd := &shopspring.NullDecimal{}
-	nm := &Money[shopspring.NullDecimal]{}
+	nd := &govalues.NullDecimal{}
+	nm := &Money[govalues.NullDecimal]{}
 
 	nd.Scan(v)
 	nm.Scan(v)

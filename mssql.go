@@ -17,6 +17,7 @@ import (
 	"unicode"
 
 	"github.com/golang-sql/sqlexp"
+	govalues "github.com/govalues/decimal"
 	"github.com/microsoft/go-mssqldb/aecmk"
 	"github.com/microsoft/go-mssqldb/internal/querytext"
 	"github.com/microsoft/go-mssqldb/msdsn"
@@ -985,7 +986,7 @@ func (rc *Rows) NextResultSet() error {
 // the value type that can be used to scan types into. For example, the database
 // column type "bigint" this should return "reflect.TypeOf(int64(0))".
 func (r *Rows) ColumnTypeScanType(index int) reflect.Type {
-	return makeGoLangScanType(r.cols[index].originalTypeInfo())
+	return makeGoLangScanType(r.cols[index].originalTypeInfo(), r.stmt.c.sess.encoding)
 }
 
 // RowsColumnTypeDatabaseTypeName may be implemented by Rows. It should return the
@@ -1048,6 +1049,9 @@ func (s *Stmt) makeParam(val driver.Value) (res param, err error) {
 		res.ti.Size = 0
 		return
 	}
+	if res, ok, err := s.nativeParam(val); ok {
+		return res, err
+	}
 
 	switch valuer := val.(type) {
 	// sql.Nullxxx integer types return an int64. We want the original type, to match the SQL type size.
@@ -1067,9 +1071,9 @@ func (s *Stmt) makeParam(val driver.Value) (res param, err error) {
 		if valuer.Valid {
 			return s.makeParam(valuer.Decimal)
 		}
-	case Money[decimal.NullDecimal]:
+	case Money[govalues.NullDecimal]:
 		if valuer.Decimal.Valid {
-			return s.makeParam(Money[decimal.Decimal]{valuer.Decimal.Decimal})
+			return s.makeParam(Money[govalues.Decimal]{valuer.Decimal.Decimal})
 		}
 	case UniqueIdentifier:
 	case NullUniqueIdentifier:
@@ -1159,7 +1163,7 @@ func (s *Stmt) makeParam(val driver.Value) (res param, err error) {
 		res.ti.TypeId = typeNVarChar
 		res.buffer = nil
 		res.ti.Size = 8000
-	case Money[decimal.NullDecimal]:
+	case Money[govalues.NullDecimal]:
 		// only null values should be getting here
 		res.ti.TypeId = typeNVarChar
 		res.buffer = nil
@@ -1539,7 +1543,7 @@ scan:
 // the value type that can be used to scan types into. For example, the database
 // column type "bigint" this should return "reflect.TypeOf(int64(0))".
 func (r *Rowsq) ColumnTypeScanType(index int) reflect.Type {
-	return makeGoLangScanType(r.cols[index].originalTypeInfo())
+	return makeGoLangScanType(r.cols[index].originalTypeInfo(), r.stmt.c.sess.encoding)
 }
 
 // RowsColumnTypeDatabaseTypeName may be implemented by Rows. It should return the

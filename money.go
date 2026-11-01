@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/shopspring/decimal"
+	"github.com/govalues/decimal"
 )
 
 type Money[D decimal.Decimal | decimal.NullDecimal] struct {

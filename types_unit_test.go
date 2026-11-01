@@ -415,7 +415,7 @@ func TestDecodeGuid(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			encoding := msdsn.EncodeParameters{GuidConversion: tc.guidConversion}
+			encoding := msdsn.EncodeParameters{GuidConversion: tc.guidConversion, LegacyTypes: true}
 			got := decodeGuid(tc.buf, encoding)
 			assert.Equal(t, tc.want, got, "decodeGuid()")
 		})
