@@ -1,0 +1,56 @@
+name: autotag
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: autotag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The driver continues from upstream microsoft/go-mssqldb v1.11.2
+          # (2510194, "chore(main): release 1.11.2"); gorm/ changes do not
+          # release it.
+          - module: driver
+            prefix: v
+            base: 1.11.2
+            baseRef: 2510194
+            paths: ". :(exclude)gorm"
+          # gorm/ is gorm.io/driver/sqlserver, forked from v1.6.4. A Go
+          # submodule's tags carry its directory as prefix.
+          - module: gorm
+            prefix: gorm/v
+            base: 1.6.4
+            baseRef: ""
+            paths: gorm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: true
+
+      - name: Tag ${{ matrix.module }}
+        id: tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          read -ra paths <<<"${{ matrix.paths }}"
+          .github/scripts/autotag.sh "${{ matrix.prefix }}" "${{ matrix.base }}" "${{ matrix.baseRef }}" "${paths[@]}" >>"$GITHUB_OUTPUT"
+
+      - name: Summary
+        if: steps.tag.outputs.tag != ''
+        run: echo "Tagged \`${{ steps.tag.outputs.tag }}\`" >>"$GITHUB_STEP_SUMMARY"
