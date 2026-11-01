@@ -149,15 +149,52 @@ func TestNativeUUIDParam(t *testing.T) {
 		assert.Equal(t, wireGUID, res.buffer)
 	})
 
-	t.Run("left in RFC order for writeGuidType to swap under guid conversion", func(t *testing.T) {
-		encoding := msdsn.EncodeParameters{GuidConversion: true}
-		res, err := stmtWithEncoding(encoding).makeParam(uuid.NullUUID{UUID: rfcGUID, Valid: true})
+	// Native types read a uniqueidentifier as the GUID the server holds
+	// whatever `guid conversion` says, so every GUID parameter must reach the
+	// wire as that same GUID too.
+	var legacyUID UniqueIdentifier
+	require.NoError(t, legacyUID.Scan(rfcGUID.String()))
+	for name, value := range map[string]driver.Value{
+		"uuid.UUID":            rfcGUID,
+		"uuid.NullUUID":        uuid.NullUUID{UUID: rfcGUID, Valid: true},
+		"UniqueIdentifier":     legacyUID,
+		"NullUniqueIdentifier": NullUniqueIdentifier{UUID: legacyUID, Valid: true},
+	} {
+		t.Run(name+" ignores guid conversion", func(t *testing.T) {
+			encoding := msdsn.EncodeParameters{GuidConversion: true}
+			res, err := stmtWithEncoding(encoding).makeParam(value)
+			require.NoError(t, err)
+			var wire bytesWriter
+			require.NoError(t, writeGuidType(&wire, res.ti, res.buffer, encoding))
+			assert.Equal(t, append([]byte{16}, wireGUID...), []byte(wire))
+		})
+	}
+
+	t.Run("legacy guid conversion swaps a UniqueIdentifier's bytes", func(t *testing.T) {
+		encoding := msdsn.EncodeParameters{GuidConversion: true, LegacyTypes: true}
+		res, err := stmtWithEncoding(encoding).makeParam(legacyUID)
 		require.NoError(t, err)
-		assert.Equal(t, rfcGUID[:], res.buffer)
 		var wire bytesWriter
 		require.NoError(t, writeGuidType(&wire, res.ti, res.buffer, encoding))
-		assert.Equal(t, append([]byte{16}, wireGUID...), []byte(wire))
+		assert.Equal(t, append([]byte{16}, rfcGUID[:]...), []byte(wire))
 	})
+}
+
+func TestGuidBufferForBulkCopy(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		encoding msdsn.EncodeParameters
+		want     []byte
+	}{
+		"native":                         {msdsn.EncodeParameters{}, wireGUID},
+		"native ignores guid conversion": {msdsn.EncodeParameters{GuidConversion: true}, wireGUID},
+		"legacy guid conversion leaves RFC order for writeGuidType": {
+			msdsn.EncodeParameters{GuidConversion: true, LegacyTypes: true}, rfcGUID[:]},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, guidBuffer(rfcGUID, tc.encoding))
+		})
+	}
 }
 
 // bytesWriter collects what a typeInfo writer writes.

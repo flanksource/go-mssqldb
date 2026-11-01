@@ -102,12 +102,13 @@ func makeUUIDParam(val uuid.UUID, encoding msdsn.EncodeParameters) (res param) {
 
 // guidBuffer is u as writeGuidType expects its buffer: SQL Server sends a
 // uniqueidentifier's first three groups little-endian, and writeGuidType
-// swaps them itself under `guid conversion`, so the buffer is in RFC 4122
-// order then and swapped here otherwise.
+// swaps them itself when the connection converts GUIDs (`guid conversion`
+// under legacy types), so the buffer is in RFC 4122 order then and swapped
+// here otherwise.
 func guidBuffer(u uuid.UUID, encoding msdsn.EncodeParameters) []byte {
 	buf := make([]byte, 16)
 	copy(buf, u[:])
-	if !encoding.GuidConversion {
+	if !encoding.ConvertsGUIDs() {
 		swapGUIDGroups(buf)
 	}
 	return buf

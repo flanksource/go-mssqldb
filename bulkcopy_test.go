@@ -177,7 +177,7 @@ func testBulkcopy(t *testing.T, guidConversion bool) {
 		{"test_intf", 1234.56, 1234},
 		{"test_intf32", float32(1234.56), 1234},
 		{"test_geom", geom, string(geom)},
-		{"test_uniqueidentifier", uid, string(uid)},
+		{"test_uniqueidentifier", uid, "ff19966f-868b-11d0-b42d-00c04fc964ff"},
 		{"test_nulluniqueidentifier", nil, nil},
 		{"test_nullfloat", sql.NullFloat64{Float64: 64, Valid: true}, 64.0},
 		{"test_nullstring", sql.NullString{String: "abcdefg", Valid: true}, "abcdefg"},

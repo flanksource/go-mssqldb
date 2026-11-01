@@ -81,6 +81,9 @@ jobs:
             exit 1
           fi
           go test -coverprofile=coverage.out -covermode=atomic -v ./...
+          # gorm/ is its own module (gorm.io/driver/sqlserver); its server tests read GORM_DSN.
+          sqlcmd -S localhost -U sa -P "$SQLCMDPASSWORD" -C -Q "CREATE DATABASE gorm"
+          (cd gorm && GORM_DSN="${SQLSERVER_DSN/database=${DATABASE}/database=gorm}" go test -v ./...)
       - name: Upload coverage to Codecov
         # codecov/codecov-action v6
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1

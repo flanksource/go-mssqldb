@@ -3,7 +3,6 @@ package sqlserver_test
 import (
 	"testing"
 
-	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 )
 
@@ -56,7 +55,7 @@ func assertUser(t *testing.T, db *gorm.DB, id int64, name string) {
 }
 
 func TestCreateWithSchemaTable(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +73,7 @@ func TestCreateWithSchemaTable(t *testing.T) {
 }
 
 func TestSaveWithSchemaTable(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Fatal(err)
 	}
