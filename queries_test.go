@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	govalues "github.com/govalues/decimal"
 	"github.com/microsoft/go-mssqldb/msdsn"
 	"github.com/shopspring/decimal"
 )
@@ -1087,6 +1089,50 @@ func TestDecimalParam(t *testing.T) {
 				t.Errorf("decimal does not match: '%s' '%s'", test.decimal.String(), decimal2.String())
 			}
 		})
+	}
+}
+
+// Under native types a decimal reaches SQL Server as decimal(38, s): FORMAT,
+// which refuses nvarchar ("Argument data type nvarchar is invalid for argument
+// 1 of format function"), formats it, and the declared type and scale are the
+// value's own. A uuid.UUID reaches it as uniqueidentifier and reads back as
+// the same UUID.
+func TestNativeTypesOnServer(t *testing.T) {
+	conn, logger := open(t)
+	defer conn.Close()
+	defer logger.StopLogging()
+
+	var formatted, baseType string
+	var precision, scale int
+	err := conn.QueryRow(`select format(@p1, 'N2'),
+		cast(sql_variant_property(@p1, 'BaseType') as nvarchar(128)),
+		cast(sql_variant_property(@p1, 'Precision') as int),
+		cast(sql_variant_property(@p1, 'Scale') as int)`, govalues.MustParse("-1234.5")).Scan(&formatted, &baseType, &precision, &scale)
+	if err != nil {
+		t.Fatal("select / scan failed", err.Error())
+	}
+	if formatted != "-1,234.50" || baseType != "decimal" || precision != 38 || scale != 1 {
+		t.Errorf("got format %q, base type %s(%d, %d); want \"-1,234.50\", decimal(38, 1)", formatted, baseType, precision, scale)
+	}
+
+	var null govalues.NullDecimal
+	if err := conn.QueryRow("select @p1", govalues.NullDecimal{}).Scan(&null); err != nil {
+		t.Fatal("select / scan of a null decimal failed", err.Error())
+	}
+	if null.Valid {
+		t.Errorf("a null decimal read back as %s", null.Decimal)
+	}
+
+	want := uuid.MustParse("01234567-89ab-cdef-0123-456789abcdef")
+	var got uuid.UUID
+	var guidType, text string
+	err = conn.QueryRow(`select @p1, cast(sql_variant_property(@p1, 'BaseType') as nvarchar(128)), cast(@p1 as nvarchar(36))`, want).
+		Scan(&got, &guidType, &text)
+	if err != nil {
+		t.Fatal("select / scan of a uuid failed", err.Error())
+	}
+	if got != want || guidType != "uniqueidentifier" || text != "01234567-89AB-CDEF-0123-456789ABCDEF" {
+		t.Errorf("got %s as %s (%s); want %s as uniqueidentifier", got, guidType, text, want)
 	}
 }
 

@@ -9,6 +9,7 @@ require (
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9
 	github.com/golang-sql/sqlexp v0.1.0
 	github.com/google/uuid v1.6.0
+	github.com/govalues/decimal v0.1.36
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.12.1

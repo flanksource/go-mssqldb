@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/microsoft/go-mssqldb/msdsn"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,11 +42,17 @@ func TestRowsq_ColumnTypeScanType(t *testing.T) {
 			typeId:   typeBitN,
 			wantType: reflect.TypeOf(true),
 		},
+		{
+			name:     "uniqueidentifier",
+			typeId:   typeGuid,
+			wantType: reflect.TypeOf(""),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &Rowsq{
+				stmt: stmtWithEncoding(msdsn.EncodeParameters{}),
 				cols: []columnStruct{
 					{
 						ti: typeInfo{TypeId: tt.typeId},

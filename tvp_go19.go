@@ -92,6 +92,10 @@ func (tvp TVP) encode(schema, name string, columnStr []columnStruct, tvpFieldInd
 	conn := new(Conn)
 	conn.sess = new(tdsSession)
 	conn.sess.loginAck = loginAckStruct{TDSVersion: verTDS73}
+	// A TVP column's type comes from the field's zero value and holds every
+	// row, so a decimal column cannot take each row's own scale: TVPs keep the
+	// text bindings.
+	conn.sess.encoding.LegacyTypes = true
 	stmt := &Stmt{
 		c: conn,
 	}
@@ -190,6 +194,10 @@ func (tvp TVP) columnTypes() ([]columnStruct, []int, error) {
 	conn := new(Conn)
 	conn.sess = new(tdsSession)
 	conn.sess.loginAck = loginAckStruct{TDSVersion: verTDS73}
+	// A TVP column's type comes from the field's zero value and holds every
+	// row, so a decimal column cannot take each row's own scale: TVPs keep the
+	// text bindings.
+	conn.sess.encoding.LegacyTypes = true
 	stmt := &Stmt{
 		c: conn,
 	}

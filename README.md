@@ -15,6 +15,25 @@ Requires Go 1.25 or above.
 
 Install with `go get github.com/microsoft/go-mssqldb@latest`.
 
+### Flanksource fork
+
+This fork keeps the module path `github.com/microsoft/go-mssqldb` and binds decimals and UUIDs natively by default (see `native types`). Use it with a `replace`:
+
+```
+replace github.com/microsoft/go-mssqldb => github.com/flanksource/go-mssqldb <version>
+```
+
+The `gorm/` directory is a fork of `gorm.io/driver/sqlserver` (from v1.6.4) built against this driver. It keeps its module path, so GORM users replace both:
+
+```
+replace (
+	github.com/microsoft/go-mssqldb => github.com/flanksource/go-mssqldb <version>
+	gorm.io/driver/sqlserver => github.com/flanksource/go-mssqldb/gorm <version>
+)
+```
+
+On top of upstream it maps `uuid.UUID`/`uuid.NullUUID`, `mssql.UniqueIdentifier` and a `type:uuid` tag to `uniqueidentifier`, maps govalues decimals to `decimal(p,s)` (`decimal(38,19)` without a `precision` tag), and renders `decimal(p,s)` without a space so AutoMigrate does not re-alter an unchanged decimal column. Its live-server tests read `GORM_DSN`.
+
 ## Connection Parameters and DSN
 
 The recommended connection string uses a URL format:
@@ -80,6 +99,9 @@ Boolean parameters accept `1`, `t`, `T`, `TRUE`, `true`, `True`, `0`, `f`, `F`, 
   * `true` (Default) Client attempt to connect to all IPs simultaneously. 
   * `false` Client attempts to connect to IPs in serial.
 * `guid conversion` - Enables the conversion of GUIDs, so that byte order is preserved. UniqueIdentifier isn't supported for nullable fields, NullUniqueIdentifier must be used instead.
+* `native types` - How decimals and UUIDs are bound and uniqueidentifiers are read.
+  * `true` (Default) A `github.com/govalues/decimal` decimal (and its `NullDecimal`) is bound as `decimal(38, s)`, with `s` the value's own scale, as the JDBC driver binds a `BigDecimal`; an `mssql.Money` as `money`; a `github.com/google/uuid` `UUID` or `NullUUID` as `uniqueidentifier`. A uniqueidentifier column is read as its canonical lowercase string (`ColumnTypeScanType` is `string`), which `uuid.UUID`, `uuid.NullUUID` and `mssql.UniqueIdentifier` all scan. A shopspring decimal has no native binding and stays `nvarchar`. Table-valued parameters keep the text bindings, because a TVP column's type comes from the field's zero value and cannot take each row's scale.
+  * `false` The upstream driver's text bindings: decimals and UUIDs are bound as `nvarchar`, and a uniqueidentifier is read as 16 raw bytes (see `guid conversion` for their order).
 
 ### Connection parameters for namedpipe package
 * `pipe`  - If set, no Browser query is made and named pipe used will be `\\<host>\pipe\<pipe>`
@@ -522,8 +544,10 @@ are supported:
 * "github.com/golang-sql/civil".DateTime -> datetime2
 * "github.com/golang-sql/civil".Time -> time
 * mssql.TVP -> Table Value Parameter (TDS version dependent)
-* "github.com/shopspring/decimal".Decimal -> decimal
-* mssql.Money -> money
+* "github.com/shopspring/decimal".Decimal -> nvarchar
+* "github.com/govalues/decimal".Decimal -> decimal(38, s) (nvarchar under `native types=false`)
+* "github.com/google/uuid".UUID -> uniqueidentifier (nvarchar under `native types=false`)
+* mssql.Money (over a govalues `Decimal` or `NullDecimal`, truncated to four places; outside money's range is an error) -> money (nvarchar under `native types=false`, except as an output parameter)
 
 Using an `int` parameter will send a 4 byte value (int) from a 32bit app and an 8 byte value (bigint) from a 64bit app. 
 To make sure your integer parameter matches the size of the SQL parameter, use the appropriate sized type like `int32` or `int8`.

@@ -88,6 +88,7 @@ const (
 	MultiSubnetFailover    = "multisubnetfailover"
 	NoTraceID              = "notraceid"
 	GuidConversion         = "guid conversion"
+	NativeTypes            = "native types"
 	Timezone               = "timezone"
 	EpaEnabled             = "epa enabled"
 )
@@ -95,6 +96,12 @@ const (
 type EncodeParameters struct {
 	// Properly convert GUIDs, using correct byte endianness
 	GuidConversion bool
+	// LegacyTypes keeps the upstream driver's text encodings (`native types=false`):
+	// decimals and UUIDs bound as nvarchar parameters, and uniqueidentifier values
+	// read as 16 raw bytes. Unset, a govalues decimal is bound as decimal(38, s),
+	// a uuid.UUID as uniqueidentifier, and a uniqueidentifier is read as its
+	// canonical lowercase string. A shopspring decimal is nvarchar either way.
+	LegacyTypes bool
 	// Timezone is the timezone to use for encoding and decoding datetime values.
 	Timezone *time.Location
 }
@@ -663,6 +670,14 @@ func Parse(dsn string) (Config, error) {
 		p.Encoding.GuidConversion = false
 	}
 
+	if nativeTypes, ok := params[NativeTypes]; ok {
+		native, err := parseBoolParam(nativeTypes)
+		if err != nil {
+			return p, fmt.Errorf("invalid native types '%s': %s", nativeTypes, err.Error())
+		}
+		p.Encoding.LegacyTypes = !native
+	}
+
 	p.EpaEnabled = false
 	epaString, ok := params[EpaEnabled]
 	if !ok {
@@ -746,6 +761,10 @@ func (p Config) URL() *url.URL {
 
 	if p.Encoding.GuidConversion {
 		q.Add(GuidConversion, strconv.FormatBool(p.Encoding.GuidConversion))
+	}
+
+	if p.Encoding.LegacyTypes {
+		q.Add(NativeTypes, "false")
 	}
 
 	if tz := p.Encoding.Timezone; tz != nil && tz != time.UTC {

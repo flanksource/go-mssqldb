@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	govalues "github.com/govalues/decimal"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +46,7 @@ func TestBulkcopyWithInvalidNullableType(t *testing.T) {
 		sql.NullTime{Valid: false},
 		NullUniqueIdentifier{Valid: false},
 		decimal.NullDecimal{Valid: false},
-		Money[decimal.NullDecimal]{decimal.NullDecimal{Valid: false}},
+		Money[govalues.NullDecimal]{govalues.NullDecimal{Valid: false}},
 	}
 
 	pool, logger := open(t)
@@ -187,10 +188,10 @@ func testBulkcopy(t *testing.T, guidConversion bool) {
 		{"test_nullint16", sql.NullInt16{Int16: 32767, Valid: true}, 32767},
 		{"test_nulltime", sql.NullTime{Time: time.Date(2010, 11, 12, 13, 14, 15, 120000000, time.UTC), Valid: true}, time.Date(2010, 11, 12, 13, 14, 15, 120000000, time.UTC)},
 		{"test_nulldecimal", decimal.NewNullDecimal(decimal.New(1232355, -4)), decimal.New(1232355, -4)},
-		{"test_nullmoney", Money[decimal.NullDecimal]{decimal.NewNullDecimal(decimal.New(-21232311232355, -4))}, decimal.New(-21232311232355, -4)},
+		{"test_nullmoney", Money[govalues.NullDecimal]{govalues.NullDecimal{Decimal: govalues.MustNew(-21232311232355, 4), Valid: true}}, govalues.MustNew(-21232311232355, 4)},
 		{"test_datetimen_midnight", time.Date(2025, 1, 1, 23, 59, 59, 998_350_000, time.UTC), time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)},
-		{"test_smallmoney", Money[decimal.Decimal]{decimal.New(-32856, -4)}, decimal.New(-32856, -4)},
-		{"test_money", Money[decimal.Decimal]{decimal.New(-21232311232355, -4)}, decimal.New(-21232311232355, -4)},
+		{"test_smallmoney", Money[govalues.Decimal]{govalues.MustNew(-32856, 4)}, govalues.MustNew(-32856, 4)},
+		{"test_money", Money[govalues.Decimal]{govalues.MustNew(-21232311232355, 4)}, govalues.MustNew(-21232311232355, 4)},
 		{"test_decimal_18_0", 1234.0001, "1234"},
 		{"test_decimal_9_2", -1234.560001, "-1234.56"},
 		{"test_decimal_20_0", 1234, "1234"},
@@ -369,8 +370,15 @@ func compareValue(a interface{}, expected interface{}) bool {
 		}
 
 		return expected.Equal(actual)
-	case Money[decimal.Decimal]:
-		actual, err := decimal.NewFromString(a.(string))
+	case govalues.Decimal:
+		actual, err := govalues.Parse(a.(string))
+		if err != nil {
+			return false
+		}
+
+		return expected.Equal(actual)
+	case Money[govalues.Decimal]:
+		actual, err := govalues.Parse(a.(string))
 		if err != nil {
 			return false
 		}
@@ -792,7 +800,6 @@ func TestBulkcopyFailure(t *testing.T) {
 	// of a failure, so the next statement would be nullified.
 	assertSQLErrorNumber(t, err, errInvalidObjectName)
 	assert.ErrorContains(t, err, "thistabledoesnotexist")
-
 
 	_, err = stmt.ExecContext(ctx)
 	assert.NoError(t, err)
