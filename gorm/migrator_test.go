@@ -11,12 +11,15 @@ import (
 	"gorm.io/gorm"
 )
 
-var sqlserverDSN = "sqlserver://gorm:LoremIpsum86@localhost:9930?database=gorm"
-
-func init() {
-	if dbDSN := os.Getenv("GORM_DSN"); dbDSN != "" {
-		sqlserverDSN = dbDSN
+// openTestDB opens the SQL Server named by GORM_DSN, skipping the test when it
+// is unset, as the driver's own server tests skip without SQLSERVER_DSN.
+func openTestDB(t *testing.T) (*gorm.DB, error) {
+	t.Helper()
+	dsn := os.Getenv("GORM_DSN")
+	if dsn == "" {
+		t.Skip("GORM_DSN is not set")
 	}
+	return gorm.Open(sqlserver.Open(dsn))
 }
 
 type Testtable struct {
@@ -50,7 +53,7 @@ type Testtable5 struct {
 func (*Testtable5) TableName() string { return "testschema2.Testtables" }
 
 func TestAutomigrateTablesWithoutDefaultSchema(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +110,7 @@ type Testtable6 struct {
 func (*Testtable6) TableName() string { return "testtable" }
 
 func TestCreateIndex(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -132,7 +135,7 @@ type TestTableDefaultValue struct {
 func (*TestTableDefaultValue) TableName() string { return "test_table_default_value" }
 
 func TestReMigrateTableFieldsWithoutDefaultValue(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -217,7 +220,7 @@ type TestTableFieldUnique struct {
 func (*TestTableFieldUnique) TableName() string { return "test_table_field_unique" }
 
 func TestHasConstraint(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +242,7 @@ func TestHasConstraint(t *testing.T) {
 }
 
 func TestMigrator_MigrateColumnComment(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +285,7 @@ func TestMigrator_MigrateColumnComment(t *testing.T) {
 }
 
 func TestMigrator_GetIndexes(t *testing.T) {
-	db, err := gorm.Open(sqlserver.Open(sqlserverDSN))
+	db, err := openTestDB(t)
 	if err != nil {
 		t.Fatal(err)
 	}

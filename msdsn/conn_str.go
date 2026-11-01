@@ -113,6 +113,15 @@ func (e EncodeParameters) GetTimezone() *time.Location {
 	return e.Timezone
 }
 
+// ConvertsGUIDs reports whether uniqueidentifier bytes are swapped between
+// RFC 4122 and wire order on the way in and out. `guid conversion` applies
+// only under legacy types: native types read a uniqueidentifier as the GUID
+// the server holds and write a uuid.UUID or mssql.UniqueIdentifier as that
+// same GUID, so a conversion would swap writes against reads.
+func (e EncodeParameters) ConvertsGUIDs() bool {
+	return e.GuidConversion && e.LegacyTypes
+}
+
 type Config struct {
 	Port       uint64
 	Host       string

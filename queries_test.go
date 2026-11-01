@@ -42,10 +42,9 @@ func testSelect(t *testing.T, guidConversion bool) {
 		}
 
 		longstr := strings.Repeat("x", 10000)
-		expectedGuid := []byte{0x6F, 0x96, 0x19, 0xFF, 0x8B, 0x86, 0xD0, 0x11, 0xB4, 0x2D, 0x00, 0xC0, 0x4F, 0xC9, 0x64, 0xFF}
-		if guidConversion {
-			expectedGuid = []byte{0xFF, 0x19, 0x96, 0x6F, 0x86, 0x8B, 0x11, 0xD0, 0xB4, 0x2D, 0x00, 0xC0, 0x4F, 0xC9, 0x64, 0xFF}
-		}
+		// Native types read a uniqueidentifier as its canonical string, the GUID
+		// SQL Server shows for these bytes, whatever `guid conversion` says.
+		expectedGuid := "ff19966f-868b-11d0-b42d-00c04fc964ff"
 
 		values := []testStruct{
 			{"1", int64(1)},
@@ -1902,7 +1901,7 @@ func TestColumnTypeIntrospection(t *testing.T) {
 		{"cast(1 as numeric(10, 4))", "DECIMAL", reflect.TypeOf([]byte{}), false, 0, true, 10, 4},
 		{"cast(1 as money)", "MONEY", reflect.TypeOf([]byte{}), false, 0, false, 0, 0},
 		{"cast(1 as smallmoney)", "SMALLMONEY", reflect.TypeOf([]byte{}), false, 0, false, 0, 0},
-		{"cast(0x6F9619FF8B86D011B42D00C04FC964FF as uniqueidentifier)", "UNIQUEIDENTIFIER", reflect.TypeOf([]byte{}), false, 0, false, 0, 0},
+		{"cast(0x6F9619FF8B86D011B42D00C04FC964FF as uniqueidentifier)", "UNIQUEIDENTIFIER", reflect.TypeOf(""), false, 0, false, 0, 0},
 		{"cast('<root/>' as xml)", "XML", reflect.TypeOf(""), true, 1073741822, false, 0, 0},
 		{"cast('abc' as text)", "TEXT", reflect.TypeOf(""), true, 2147483647, false, 0, 0},
 		{"cast(N'abc' as ntext)", "NTEXT", reflect.TypeOf(""), true, 1073741823, false, 0, 0},

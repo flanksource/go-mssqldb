@@ -98,7 +98,7 @@ Boolean parameters accept `1`, `t`, `T`, `TRUE`, `true`, `True`, `0`, `f`, `F`, 
 * `multisubnetfailover`
   * `true` (Default) Client attempt to connect to all IPs simultaneously. 
   * `false` Client attempts to connect to IPs in serial.
-* `guid conversion` - Enables the conversion of GUIDs, so that byte order is preserved. UniqueIdentifier isn't supported for nullable fields, NullUniqueIdentifier must be used instead.
+* `guid conversion` - Enables the conversion of GUIDs, so that byte order is preserved. UniqueIdentifier isn't supported for nullable fields, NullUniqueIdentifier must be used instead. Applies only with `native types=false`: native types always read and write a uniqueidentifier as the GUID the server holds.
 * `native types` - How decimals and UUIDs are bound and uniqueidentifiers are read.
   * `true` (Default) A `github.com/govalues/decimal` decimal (and its `NullDecimal`) is bound as `decimal(38, s)`, with `s` the value's own scale, as the JDBC driver binds a `BigDecimal`; an `mssql.Money` as `money`; a `github.com/google/uuid` `UUID` or `NullUUID` as `uniqueidentifier`. A uniqueidentifier column is read as its canonical lowercase string (`ColumnTypeScanType` is `string`), which `uuid.UUID`, `uuid.NullUUID` and `mssql.UniqueIdentifier` all scan. A shopspring decimal has no native binding and stays `nvarchar`. Table-valued parameters keep the text bindings, because a TVP column's type comes from the field's zero value and cannot take each row's scale.
   * `false` The upstream driver's text bindings: decimals and UUIDs are bound as `nvarchar`, and a uniqueidentifier is read as 16 raw bytes (see `guid conversion` for their order).
